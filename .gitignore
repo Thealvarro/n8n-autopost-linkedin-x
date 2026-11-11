@@ -1,0 +1,19 @@
+# Sistema operativo
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Secretos
+.env
+.env.*
+
+# Copias privadas
+*-original.json
+privado/

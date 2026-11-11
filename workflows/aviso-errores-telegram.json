@@ -1,0 +1,59 @@
+{
+  "name": "Aviso de errores (Telegram)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b6894c0a-e56c-4b4e-9ca2-590b3beba033",
+      "name": "Cuando algo falla",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "TU_CHAT_ID_DE_TELEGRAM",
+        "text": "=ojo, falló el workflow {{ $json.workflow?.name }}\n\nnodo: {{ $json.execution?.lastNodeExecuted }}\nerror: {{ $json.execution?.error?.message }}\n\n{{ /401|token|unauthorized|expired/i.test($json.execution?.error?.message ?? '') ? 'parece que venció el permiso de LinkedIn, hay que reconectar la credencial en n8n' : '' }}\nrevisar acá: {{ $json.execution?.url }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "786d0178-9a35-4a66-b019-c62586c05141",
+      "name": "Avisar por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "CONFIGURAR",
+          "name": "Telegram"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cuando algo falla": {
+      "main": [
+        [
+          {
+            "node": "Avisar por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "pinData": {},
+  "active": false
+}

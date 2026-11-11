@@ -1,0 +1,1124 @@
+{
+  "name": "Autopost LinkedIn + X con aprobación por Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 2,
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "89824762-efc2-4c93-81a2-60f40839c5aa",
+      "name": "Cada 2 días 10:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "ff9a1ee7-36f5-4fb2-951f-021748721e39",
+      "name": "Probar a mano",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "estado",
+              "condition": "eq",
+              "keyValue": "pendiente"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "25d8b20b-26eb-4282-a4eb-8612193b7b83",
+      "name": "Siguiente tema",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        240,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "response",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.5",
+          "mode": "list",
+          "cachedResultName": "gpt-5.5"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Tema: {{ $json.tema }}\nPilar: {{ $json.pilar }}\nEnfoque: {{ $json.enfoque }}"
+            }
+          ]
+        },
+        "options": {
+          "instructions": "Escribe como [TU NOMBRE], [A QUÉ TE DEDICAS] de [TU SITIO], contándole algo a un dueño de negocio, con cercanía pero con respeto profesional. Es un post de LinkedIn y tiene que sonar escrito a mano por él, como si estuviera hablando, nunca como texto de IA.\nReglas de forma, todas obligatorias:\n- todo en minúscula, salvo la primera letra de cada párrafo, que va con mayúscula, y los nombres de marcas, productos o personas como Vercel, Claude, WhatsApp o Google\n- nada de puntos seguidos, las ideas se encadenan con comas y lo que sigue a la coma va en minúscula\n- sin punto final\n- deja una línea en blanco solo cuando cambias de tema, máximo 3 bloques\n- sin emojis, sin hashtags, sin comillas, sin paréntesis, sin dos puntos, sin guiones, sin signos de exclamación, sin listas ni negritas\n- palabras simples y cotidianas pero en registro profesional, porque lo leen empresarios que pueden contratar a [TU NOMBRE], nada de modismos ni jerga chilena como cachar, caleta, al tiro, bacán, pega, pucha, fome, po o weá, usa la palabra normal que corresponde como entender, mucho, de inmediato, trabajo o aburrido\n- nada de palabras de marketing como revolucionario, potente, increíble, descubre, transforma o potencia\n- entre 50 y 110 palabras\nContenido: cuenta qué es y para qué le sirve a un negocio, usando solo la información del tema y el enfoque, sin inventar cifras ni datos. No pongas el link ni menciones la guía, eso se agrega solo al final. Cierra con una idea práctica o una opinión tuya corta.\nEjemplo del tono que buscas: Ya puedes poner títulos en la descripción completa, deja el cursor en la línea que quieres convertir y aprieta título h2 o subtítulo h3 arriba del campo, si lo vuelves a apretar la línea queda como texto normal, en la página del producto se ven como títulos de verdad que es lo que cuenta para google\nDevuelve solo el texto del post."
+        }
+      },
+      "id": "bb407352-030c-4508-874c-7113a9d29ffb",
+      "name": "Redactar post",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        480,
+        100
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "CONFIGURAR",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5c9b5e99-2a50-4dec-a88c-1a80da1037de",
+              "name": "texto",
+              "type": "string",
+              "value": "={{ ($json.output?.[0]?.content?.[0]?.text ?? '').trim().replace(/\\.$/, '').replace(/(^|\\n\\s*\\n)(\\S)/g, (m, a, b) => a + b.toUpperCase()) + '\\n\\nLa guía completa está acá ' + $('Siguiente tema').first().json.url_recurso }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "115c8157-c5d8-4ee8-9279-f5ebdda84978",
+      "name": "Armar texto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Siguiente tema').first().json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "estado": "borrador",
+            "texto": "={{ $('Armar texto').first().json.texto }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "texto",
+              "displayName": "texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "18955b2d-f2ce-46cb-8c0b-7fbaf2bbedef",
+      "name": "Guardar borrador",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "TU_CHAT_ID_DE_TELEGRAM",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "=Imagen propuesta para: {{ $('Siguiente tema').first().json.tema }}"
+        }
+      },
+      "id": "76728cc0-35ba-424e-832d-e310418c736f",
+      "name": "Enviar imagen",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "CONFIGURAR",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "TU_CHAT_ID_DE_TELEGRAM",
+        "message": "=Post propuesto para LinkedIn:\n\n{{ $('Armar texto').first().json.texto }}\n\nVersión para X:\n\n{{ $('Armar texto X').first().json.texto_x }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "✅ Publicar",
+            "disapproveLabel": "❌ Descartar"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 46,
+              "resumeUnit": "hours"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "id": "17d179f8-e679-479e-b35a-d735256bf00d",
+      "name": "Aprobar en Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1780,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "CONFIGURAR",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b95af9c4-f663-479e-9489-94c35ba46f06",
+              "leftValue": "={{ $json.data?.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "01d5c173-9573-4d63-b071-4527c5223de6",
+      "name": "¿Aprobado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Siguiente tema').first().json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "estado": "publicado",
+            "fecha_publicacion": "={{ $now.setZone('America/Santiago').toFormat('yyyy-MM-dd HH:mm') }}",
+            "link_post": "={{ 'https://www.linkedin.com/feed/update/' + ($json.headers?.['x-restli-id'] ?? '') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fecha_publicacion",
+              "displayName": "fecha_publicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "link_post",
+              "displayName": "link_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "32a3c521-910e-4372-b44d-d3dcd6ba3d23",
+      "name": "Marcar publicado",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3040,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Siguiente tema').first().json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "estado": "descartado"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c545c5ae-c6cd-4e0c-9988-2dd56d2c3122",
+      "name": "Marcar descartado",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data[0].b64_json",
+        "binaryPropertyName": "data",
+        "options": {
+          "fileName": "imagen-linkedin.png",
+          "mimeType": "image/png"
+        }
+      },
+      "id": "09c1dfa0-e516-4243-9587-7794d18ca39d",
+      "name": "Crear imagen",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/rest/images?action=initializeUpload",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "202606"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"initializeUploadRequest\":{\"owner\":\"urn:li:person:TU_ID_DE_LINKEDIN\"}}",
+        "options": {}
+      },
+      "id": "1c807fad-f786-4c0a-8712-4390a5c2d433",
+      "name": "Iniciar subida",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2160,
+        -100
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "CONFIGURAR",
+          "name": "LinkedIn"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// LinkedIn usa formato 'little text': hay que escapar sus caracteres reservados\nconst crudo = $('Armar texto').first().json.texto;\nconst escapado = crudo.replace(/[\\\\|{}@\\[\\]()<>*_~]/g, (c) => '\\\\' + c);\nconst commentary = escapado.replace(/#([\\p{L}\\p{N}_]+)/gu, '{hashtag|\\\\#|$1}');\nreturn [{\n  json: { uploadUrl: $json.value.uploadUrl, image: $json.value.image, commentary },\n  binary: $('Crear imagen').first().binary,\n}];"
+      },
+      "id": "b24fab1b-cd98-486e-9286-5533b818c5e0",
+      "name": "Preparar imagen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2380,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.uploadUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "25fca60e-fb55-433b-abac-6ad49a7b0e67",
+      "name": "Subir imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2600,
+        -100
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "CONFIGURAR",
+          "name": "LinkedIn"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/rest/posts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "202606"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ author: 'urn:li:person:TU_ID_DE_LINKEDIN', commentary: $('Preparar imagen').first().json.commentary, visibility: 'PUBLIC', distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] }, content: { media: { id: $('Preparar imagen').first().json.image, altText: $('Siguiente tema').first().json.tema } }, lifecycleState: 'PUBLISHED', isReshareDisabledByAuthor: false }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "0714780d-675f-47fa-8f1c-8825fb2ad5e9",
+      "name": "Publicar en LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2820,
+        -100
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "CONFIGURAR",
+          "name": "LinkedIn"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rota el estilo según el id del tema, así cada post se ve distinto\nconst estilos = [\n  { nombre: 'Póster editorial', persona: true, desc: 'titular gigante en dos tonos ocupando la mitad superior, la persona posando sentado en una silla moderna, fondo de color sólido intenso, mucho espacio negativo' },\n  { nombre: 'Portada de diario', persona: true, desc: 'la persona sentado sosteniendo un diario abierto que tapa parte de su cuerpo, el titular impreso en la portada del diario en tipografía condensada negra y de color' },\n  { nombre: 'Infografía de recurso', persona: false, desc: 'titular grande a la izquierda con etiqueta superior tipo badge, a la derecha un diagrama con íconos conectados por líneas punteadas, abajo una franja con 5 o 6 beneficios con íconos lineales' },\n  { nombre: 'Personaje sticker', persona: true, desc: 'la persona recortado como sticker con borde blanco grueso, cabeza levemente grande estilo caricatura, flechas dibujadas a mano y 3 anotaciones cortas alrededor, fondo liso oscuro' },\n  { nombre: 'Tipografía gigante', persona: true, desc: 'una palabra clave enorme en color detrás de la persona que aparece delante tomando un café, frase corta arriba a la izquierda, fondo claro con textura de papel' },\n  { nombre: 'Escritorio cenital', persona: false, desc: 'vista desde arriba de manos trabajando en un laptop sobre escritorio claro, con taza y celular, titular grande arriba con una palabra resaltada en bloque de color, 3 etiquetas de texto tipo cinta sobre la escena' },\n  { nombre: 'Tipografía con fotos', persona: true, desc: 'frase grande en tipografía negra sobre fondo gris claro, con pequeñas fotos rectangulares de la persona trabajando insertadas entre las palabras' },\n  { nombre: 'Mockup de producto', persona: true, desc: 'titular grande con palabras en cursiva destacada, la persona relajado en un puff a un lado y un celular o laptop flotando mostrando una interfaz, fondo degradado suave, íconos 3D pequeños' },\n];\nconst fila = $('Siguiente tema').first().json;\nconst estilo = estilos[fila.id % estilos.length];\nreturn [{ json: { ...fila, estilo: estilo.nombre, estilo_desc: estilo.desc, con_persona: estilo.persona } }];"
+      },
+      "id": "010b9644-60cd-44a7-b08d-8ef8390a37dc",
+      "name": "Elegir estilo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "response",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.5",
+          "mode": "list",
+          "cachedResultName": "gpt-5.5"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Tema: {{ $json.tema }}\nEnfoque: {{ $json.enfoque }}\nEstilo asignado: {{ $json.estilo }} — {{ $json.estilo_desc }}\nLleva persona: {{ $json.con_persona ? 'sí' : 'no' }}"
+            }
+          ]
+        },
+        "options": {
+          "instructions": "Eres director de arte de [TU NOMBRE] ([TU SITIO]), [A QUÉ TE DEDICAS]. Diseñas la imagen vertical de un post de LinkedIn.\nDevuelve SOLO un JSON válido, sin texto extra, con estas claves:\n- \"titular\": de 3 a 7 palabras en español de Chile, directo e impactante, sin hashtags.\n- \"bajada\": opcional, máximo 10 palabras en español, o cadena vacía.\n- \"paleta\": 2 o 3 colores en hex que combinen con el estilo. Varía la paleta entre posts. Nunca uses violeta, morado ni lavanda.\n- \"prompt\": instrucciones detalladas en inglés para un generador de imágenes. Describe el layout del estilo asignado, la paleta, la iluminación y el encuadre de un póster vertical 2:3 para LinkedIn. Incluye el texto exacto a renderizar entre comillas dobles, en español y con tildes correctas: el titular, la bajada si existe, y \"[TU SITIO]\" pequeño en una esquina inferior. Si el estilo lleva persona, indica que el hombre de las fotos de referencia es el protagonista: mantener idénticos su cara y rasgos, [DESCRIBE CÓMO ERES: edad aproximada, pelo, barba, ropa habitual]. No incluyas logos de marcas de terceros ni texto adicional."
+        }
+      },
+      "id": "d22d96d7-2c54-41da-8d57-eeadc299cd8e",
+      "name": "Director de arte",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "CONFIGURAR",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convierte la respuesta del director en campos usables\nconst crudo = ($json.output?.[0]?.content?.[0]?.text ?? '').replace(/^```(json)?|```$/g, '').trim();\nconst brief = JSON.parse(crudo);\nconst base = $('Elegir estilo').first().json;\nreturn [{ json: { ...brief, estilo: base.estilo, con_persona: base.con_persona } }];"
+      },
+      "id": "484e7a49-df29-4471-b98a-2f89102569d8",
+      "name": "Leer brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ab25ed96-ba68-41bc-91e2-07b4a596f6ce",
+              "leftValue": "={{ $json.con_persona }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "155ef7ea-fd61-4adb-b897-93ade734b6eb",
+      "name": "¿Con persona?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Descarga las tus fotos de referencia (súbelas sin GPS) para mandarlas a OpenAI\nconst base = 'https://TU-DOMINIO.com/fotos-referencia/';\nconst binary = {};\nfor (let i = 1; i <= 4; i++) {\n  const buf = await this.helpers.httpRequest({ url: `${base}ref${i}.jpg`, encoding: 'arraybuffer', json: false });\n  binary[`foto${i}`] = await this.helpers.prepareBinaryData(Buffer.from(buf), `ref${i}.jpg`, 'image/jpeg');\n}\nreturn [{ json: $json, binary }];"
+      },
+      "id": "22aa9bea-7d77-4e4a-a85a-8a61e661472e",
+      "name": "Descargar fotos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/edits",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-image-2"
+            },
+            {
+              "name": "prompt",
+              "value": "={{ $json.prompt }}"
+            },
+            {
+              "name": "size",
+              "value": "1024x1536"
+            },
+            {
+              "name": "quality",
+              "value": "high"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "image[]",
+              "inputDataFieldName": "foto1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "image[]",
+              "inputDataFieldName": "foto2"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "image[]",
+              "inputDataFieldName": "foto3"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "image[]",
+              "inputDataFieldName": "foto4"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "id": "213c5acf-9bb0-4c55-813f-fd48fe6b27c4",
+      "name": "Imagen con persona",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2300,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "CONFIGURAR",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-image-2', size: '1024x1536', quality: 'high', n: 1, prompt: $json.prompt }) }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "id": "3b8e5806-cf4e-4b1d-b87f-0a82bcc8d575",
+      "name": "Imagen sin persona",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2300,
+        400
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "CONFIGURAR",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "response",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.5",
+          "mode": "list",
+          "cachedResultName": "gpt-5.5"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Tema: {{ $('Siguiente tema').first().json.tema }}\nPilar: {{ $('Siguiente tema').first().json.pilar }}\nEnfoque: {{ $('Siguiente tema').first().json.enfoque }}\nPost de LinkedIn: {{ $('Redactar post').first().json.output?.[0]?.content?.[0]?.text ?? '' }}"
+            }
+          ]
+        },
+        "options": {
+          "instructions": "Escribe como [TU NOMBRE], [A QUÉ TE DEDICAS] de [TU SITIO], contándole algo a un dueño de negocio, con cercanía pero con respeto profesional. Es un post corto para X y tiene que sonar escrito a mano por él, como si estuviera hablando, nunca como texto de IA.\nVas a recibir el tema, el pilar, el enfoque y el post de LinkedIn ya redactado. Tu trabajo es decir lo mismo que ese post pero condensado en una sola idea. No inventes otro ángulo ni agregues datos, cifras o detalles que no estén en el tema, el enfoque o el post de LinkedIn.\nLímite duro: máximo 200 caracteres contando espacios. Después el workflow agrega solo el final con el link y el total no puede pasar de 280, así que si te pasas de 200 el post se rompe. Escribe un solo bloque, una sola idea, sin saltos de línea. Antes de responder cuenta los caracteres y, si pasas de 200, recorta palabras hasta que quepa.\nReglas de forma, todas obligatorias:\n- todo en minúscula, salvo la primera letra del post, que va con mayúscula, y los nombres de marcas, productos o personas como Vercel, Claude, WhatsApp o Google\n- nada de puntos seguidos, las ideas se encadenan con comas y lo que sigue a la coma va en minúscula\n- sin punto final\n- un solo bloque, sin saltos de línea\n- sin emojis, sin hashtags, sin menciones con arroba, sin comillas, sin paréntesis, sin dos puntos, sin guiones, sin signos de exclamación, sin listas ni negritas\n- palabras simples y cotidianas pero en registro profesional, porque lo leen empresarios que pueden contratar a [TU NOMBRE], nada de modismos ni jerga chilena como cachar, caleta, al tiro, bacán, pega, pucha, fome, po o weá, usa la palabra normal que corresponde como entender, mucho, de inmediato, trabajo o aburrido\n- nada de palabras de marketing como revolucionario, potente, increíble, descubre, transforma o potencia\nContenido: cuenta qué es y para qué le sirve a un negocio, quedándote con lo más importante del post de LinkedIn. No pongas el link ni menciones la guía, eso se agrega solo al final. Si te alcanza el espacio, cierra con una opinión tuya muy corta, si no, termina con la idea práctica.\nEjemplo del tono que buscas, con menos de 200 caracteres: Ya puedes poner títulos en la descripción, deja el cursor en la línea y aprieta título h2 o subtítulo h3, en la página del producto se ven como títulos que es lo que cuenta para Google\nDevuelve solo el texto del post, sin comillas ni explicaciones."
+        }
+      },
+      "id": "55114eb1-6818-4b29-b85b-621f7ad0caec",
+      "name": "Redactar para X",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -120
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "CONFIGURAR",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7e6fa1e1-0c5e-439a-b78c-1e2b804ef6cc",
+              "name": "texto_x",
+              "type": "string",
+              "value": "={{ ($json.output?.[0]?.content?.[0]?.text ?? '').replace(/\\s+/g, ' ').trim().replace(/\\.$/, '').replace(/^(.{0,225})(?:[\\s,].*)?$/, '$1').replace(/[\\s,]+$/, '').replace(/^\\S/, c => c.toUpperCase()) + '\\n\\nLa guía completa está acá ' + $('Siguiente tema').first().json.url_recurso }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a16f4cf6-1ad7-4920-9f06-5a32383c57d0",
+      "name": "Armar texto X",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        -120
+      ]
+    },
+    {
+      "id": "f45397b0-cd7b-43c7-a3f3-d4a3186576ef",
+      "name": "Publicar en X",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3260,
+        -100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.com/2/tweets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $('Armar texto X').first().json.texto_x }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "oAuth2Api": {
+          "id": "CONFIGURAR",
+          "name": "X (OAuth2)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cada 2 días 10:00": {
+      "main": [
+        [
+          {
+            "node": "Siguiente tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probar a mano": {
+      "main": [
+        [
+          {
+            "node": "Siguiente tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siguiente tema": {
+      "main": [
+        [
+          {
+            "node": "Redactar post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar post": {
+      "main": [
+        [
+          {
+            "node": "Armar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar texto": {
+      "main": [
+        [
+          {
+            "node": "Redactar para X",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar borrador": {
+      "main": [
+        [
+          {
+            "node": "Elegir estilo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear imagen": {
+      "main": [
+        [
+          {
+            "node": "Enviar imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar imagen": {
+      "main": [
+        [
+          {
+            "node": "Aprobar en Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aprobar en Telegram": {
+      "main": [
+        [
+          {
+            "node": "¿Aprobado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Aprobado?": {
+      "main": [
+        [
+          {
+            "node": "Iniciar subida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marcar descartado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar en LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Marcar publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iniciar subida": {
+      "main": [
+        [
+          {
+            "node": "Preparar imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar imagen": {
+      "main": [
+        [
+          {
+            "node": "Subir imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subir imagen": {
+      "main": [
+        [
+          {
+            "node": "Publicar en LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir estilo": {
+      "main": [
+        [
+          {
+            "node": "Director de arte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Director de arte": {
+      "main": [
+        [
+          {
+            "node": "Leer brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer brief": {
+      "main": [
+        [
+          {
+            "node": "¿Con persona?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Con persona?": {
+      "main": [
+        [
+          {
+            "node": "Descargar fotos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Imagen sin persona",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar fotos": {
+      "main": [
+        [
+          {
+            "node": "Imagen con persona",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Imagen con persona": {
+      "main": [
+        [
+          {
+            "node": "Crear imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Imagen sin persona": {
+      "main": [
+        [
+          {
+            "node": "Crear imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar para X": {
+      "main": [
+        [
+          {
+            "node": "Armar texto X",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar texto X": {
+      "main": [
+        [
+          {
+            "node": "Guardar borrador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar publicado": {
+      "main": [
+        [
+          {
+            "node": "Publicar en X",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "pinData": {},
+  "active": false
+}
